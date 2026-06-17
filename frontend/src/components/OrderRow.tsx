@@ -24,7 +24,7 @@ const OrderRow = ({ order, expanded, onToggle, onEdit }: OrderRowProps) => {
 
     return (
         <>
-            <tr onClick={onToggle} style={{ cursor: 'pointer' }}>
+            <tr className="clickable-row" onClick={onToggle}>
                 <td>{order._id}</td>
                 <td>{order.name}</td>
                 <td>{order.surname}</td>
@@ -42,31 +42,34 @@ const OrderRow = ({ order, expanded, onToggle, onEdit }: OrderRowProps) => {
                 <td>{order.group}</td>
             </tr>
             {expanded && (
-                <tr>
-                    <td colSpan={15} style={{ background: '#f5f5f5', padding: 10 }}>
-                        <div><strong>Message:</strong> {order.msg}</div>
-                        <div><strong>UTM:</strong> {order.utm}</div>
-                        <div><strong>Comments:</strong></div>
-                        <ul>
-                            {order.comments?.map((c: any, idx: number) => (
-                                <li key={idx}>
-                                    <b>{c.author?.name} {c.author?.surname}</b> ({new Date(c.createdAt).toLocaleString()}): {c.text}
-                                </li>
-                            ))}
-                        </ul>
-                        {canInteract && (
-                            <div>
-                                <textarea
-                                    value={commentText}
-                                    onChange={e => setCommentText(e.target.value)}
-                                    placeholder="Write a comment..."
-                                    rows={2}
-                                    style={{ width: '80%' }}
-                                />
-                                <button onClick={handleAddComment}>Add comment</button>
-                            </div>
-                        )}
-                        {canInteract && <button onClick={onEdit}>Edit order</button>}
+                <tr className="expanded-row">
+                    <td colSpan={15}>
+                        <div className="expanded-content">
+                            <div><strong>Message:</strong> {order.msg}</div>
+                            <div><strong>UTM:</strong> {order.utm}</div>
+                            <div><strong>Comments:</strong></div>
+                            <ul>
+                                {order.comments?.map((c: any, idx: number) => (
+                                    <li key={idx}>
+                                        <b>{c.author?.name} {c.author?.surname}</b> ({new Date(c.createdAt).toLocaleString()}): {c.text}
+                                    </li>
+                                ))}
+                            </ul>
+                            {canInteract && (
+                                <div>
+                                    <textarea
+                                        value={commentText}
+                                        onChange={e => setCommentText(e.target.value)}
+                                        placeholder="Write a comment..."
+                                        rows={2}
+                                    />
+                                    <div>
+                                        <button onClick={handleAddComment}>Add comment</button>
+                                        <button onClick={onEdit} style={{ marginLeft: '10px' }}>Edit order</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </td>
                 </tr>
             )}

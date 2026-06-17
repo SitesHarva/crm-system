@@ -19,28 +19,30 @@ export const OrderTable: React.FC<OrderTableProps> = ({ orders, loading, onSort,
 
     return (
         <>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr>
-                    {columns.map(col => (
-                        <th key={col} onClick={() => onSort(col)} style={{ cursor: 'pointer', border: '1px solid #ddd', padding: 8 }}>
-                            {col} {sortBy === col && '↑'} {sortBy === `-${col}` && '↓'}
-                        </th>
+            <div className="table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        {columns.map(col => (
+                            <th key={col} onClick={() => onSort(col)}>
+                                {col} {sortBy === col && '↑'} {sortBy === `-${col}` && '↓'}
+                            </th>
+                        ))}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {orders.map(order => (
+                        <OrderRow
+                            key={order._id}
+                            order={order}
+                            expanded={expandedId === order._id}
+                            onToggle={() => setExpandedId(expandedId === order._id ? null : order._id)}
+                            onEdit={() => setEditingOrder(order)}
+                        />
                     ))}
-                </tr>
-                </thead>
-                <tbody>
-                {orders.map(order => (
-                    <OrderRow
-                        key={order._id}
-                        order={order}
-                        expanded={expandedId === order._id}
-                        onToggle={() => setExpandedId(expandedId === order._id ? null : order._id)}
-                        onEdit={() => setEditingOrder(order)}
-                    />
-                ))}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
             {editingOrder && <EditModal order={editingOrder} onClose={() => setEditingOrder(null)} />}
         </>
     );

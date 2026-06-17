@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../store/authSlice';
-import type {AppDispatch} from "../store";
+import type { AppDispatch } from '../store';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -22,9 +22,9 @@ const Login = () => {
     };
 
     return (
-        <div style={{ maxWidth: 400, margin: '100px auto', padding: 20 }}>
+        <div className="auth-container">
             <h2>CRM Login</h2>
-            {error && <div style={{ color: 'red' }}>{error}</div>}
+            {error && <div className="error" style={{ color: 'red', textAlign: 'center', marginBottom: '16px' }}>{error}</div>}
             <form onSubmit={handleSubmit}>
                 <input
                     type="email"
@@ -32,7 +32,6 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    style={{ width: '100%', marginBottom: 10, padding: 8 }}
                 />
                 <input
                     type="password"
@@ -40,9 +39,8 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    style={{ width: '100%', marginBottom: 10, padding: 8 }}
                 />
-                <button type="submit" style={{ padding: 8, width: '100%' }}>Login</button>
+                <button type="submit">Login</button>
             </form>
         </div>
     );

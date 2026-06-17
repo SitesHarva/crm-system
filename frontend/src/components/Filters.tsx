@@ -38,7 +38,7 @@ const Filters = ({ filters, onChange, onClear }: FiltersProps) => {
     };
 
     return (
-        <div style={{ padding: '10px', background: '#f9f9f9', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <div className="filters">
             <input placeholder="Name" value={filters.name} onChange={e => onChange('name', e.target.value)} />
             <input placeholder="Surname" value={filters.surname} onChange={e => onChange('surname', e.target.value)} />
             <input placeholder="Email" value={filters.email} onChange={e => onChange('email', e.target.value)} />
@@ -86,7 +86,7 @@ const Filters = ({ filters, onChange, onClear }: FiltersProps) => {
                 <input type="checkbox" checked={myChecked} onChange={handleMyCheckbox} /> My orders only
             </label>
 
-            <button onClick={onClear}>Clear filters</button>
+            <button className="secondary" onClick={onClear}>Clear filters</button>
             <button onClick={handleExportExcel}>Export Excel</button>
         </div>
     );

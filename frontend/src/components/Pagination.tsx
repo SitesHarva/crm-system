@@ -43,14 +43,14 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) 
     if (totalPages <= 1) return null;
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
+        <div className="pagination">
             <button disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)}>Prev</button>
             {getPageNumbers().map((page, idx) => (
                 <button
                     key={idx}
                     onClick={() => typeof page === 'number' && onPageChange(page)}
                     disabled={page === currentPage}
-                    style={{ fontWeight: page === currentPage ? 'bold' : 'normal' }}
+                    className={page === currentPage ? 'active' : ''}
                 >
                     {page}
                 </button>

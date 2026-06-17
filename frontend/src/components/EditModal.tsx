@@ -43,6 +43,7 @@ const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
     const [groups, setGroups] = useState<string[]>([]);
     const [showAddGroup, setShowAddGroup] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
+    const [groupError, setGroupError] = useState('');
 
     useEffect(() => {
         const fetchGroups = async () => {
@@ -59,18 +60,27 @@ const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
+        if (name === 'group') {
+            setGroupError('');
+        }
     };
 
     const handleAddGroup = async () => {
-        if (!newGroupName.trim()) return;
+        if (!newGroupName.trim()) {
+            setGroupError('Group name cannot be empty');
+            return;
+        }
         try {
             await api.post('/groups', { name: newGroupName.trim() });
             setGroups(prev => [...prev, newGroupName.trim()]);
             setForm(prev => ({ ...prev, group: newGroupName.trim() }));
             setNewGroupName('');
             setShowAddGroup(false);
-        } catch (e) {
-            console.error('Failed to add group', e);
+            setGroupError('');
+        } catch (error: any) {
+            const msg = error.response?.data?.message || 'Failed to add group';
+            setGroupError(msg);
+            alert(msg);
         }
     };
 
@@ -90,61 +100,63 @@ const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
     };
 
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: 20, borderRadius: 8, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
                 <h3>Edit Order</h3>
                 <form onSubmit={handleSubmit}>
-                    <input name="name" placeholder="Name" value={form.name} onChange={handleChange} /><br />
-                    <input name="surname" placeholder="Surname" value={form.surname} onChange={handleChange} /><br />
-                    <input name="email" placeholder="Email" value={form.email} onChange={handleChange} /><br />
-                    <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} /><br />
-                    <input name="age" placeholder="Age" value={form.age} onChange={handleChange} type="number" /><br />
+                    <input name="name" placeholder="Name" value={form.name} onChange={handleChange} />
+                    <input name="surname" placeholder="Surname" value={form.surname} onChange={handleChange} />
+                    <input name="email" placeholder="Email" value={form.email} onChange={handleChange} />
+                    <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} />
+                    <input name="age" placeholder="Age" value={form.age} onChange={handleChange} type="number" />
 
                     <select name="course" value={form.course} onChange={handleChange}>
                         <option value="">Course</option>
                         {courses.map(c => <option key={c}>{c}</option>)}
-                    </select><br />
+                    </select>
 
                     <select name="course_format" value={form.course_format} onChange={handleChange}>
                         <option value="">Format</option>
                         {courseFormats.map(f => <option key={f}>{f}</option>)}
-                    </select><br />
+                    </select>
 
                     <select name="course_type" value={form.course_type} onChange={handleChange}>
                         <option value="">Type</option>
                         {courseTypes.map(t => <option key={t}>{t}</option>)}
-                    </select><br />
+                    </select>
 
                     <select name="status" value={form.status} onChange={handleChange}>
                         <option value="">Status</option>
                         {statuses.map(s => <option key={s}>{s}</option>)}
-                    </select><br />
+                    </select>
 
-                    <input name="sum" placeholder="Sum" value={form.sum} onChange={handleChange} type="number" /><br />
-                    <input name="already_paid" placeholder="Already paid" value={form.already_paid} onChange={handleChange} type="number" /><br />
+                    <input name="sum" placeholder="Sum" value={form.sum} onChange={handleChange} type="number" />
+                    <input name="already_paid" placeholder="Already paid" value={form.already_paid} onChange={handleChange} type="number" />
 
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <select name="group" value={form.group} onChange={handleChange} style={{ flex: 1 }}>
+                    <div className="group-row">
+                        <select name="group" value={form.group} onChange={handleChange}>
                             <option value="">Group</option>
                             {groups.map(g => <option key={g}>{g}</option>)}
                         </select>
                         <button type="button" onClick={() => setShowAddGroup(true)}>+ ADD GROUP</button>
                     </div>
                     {showAddGroup && (
-                        <div style={{ marginTop: 8 }}>
+                        <div className="group-add">
                             <input
                                 placeholder="New group name"
                                 value={newGroupName}
                                 onChange={(e) => setNewGroupName(e.target.value)}
                             />
                             <button type="button" onClick={handleAddGroup}>Add</button>
-                            <button type="button" onClick={() => setShowAddGroup(false)}>Cancel</button>
+                            <button type="button" className="secondary" onClick={() => { setShowAddGroup(false); setGroupError(''); }}>Cancel</button>
+                            {groupError && <div className="error-text">{groupError}</div>}
                         </div>
                     )}
-                    <br />
 
-                    <button type="submit">Save</button>
-                    <button type="button" onClick={onClose}>Cancel</button>
+                    <div className="actions">
+                        <button type="button" className="secondary" onClick={onClose}>Cancel</button>
+                        <button type="submit">Save</button>
+                    </div>
                 </form>
             </div>
         </div>

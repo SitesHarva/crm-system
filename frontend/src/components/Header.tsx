@@ -14,16 +14,18 @@ const Header = () => {
     };
 
     return (
-        <header style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', background: '#f0f0f0' }}>
-            <div>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>📋 CRM</span>
+        <header className="header">
+            <div className="header-left">
+                <span className="logo">📋 CRM</span>
             </div>
-            <div>
-                <span>{user?.role === 'admin' ? 'Admin' : 'Manager'}: {user?.name} {user?.surname}</span>
+            <div className="header-right">
+                <span className="role-badge">
+                    {user?.role === 'admin' ? 'Admin' : 'Manager'}: {user?.name} {user?.surname}
+                </span>
                 {user?.role === 'admin' && (
-                    <button onClick={() => navigate('/admin')} style={{ marginLeft: 10 }}>Admin Panel</button>
+                    <button onClick={() => navigate('/admin')}>Admin Panel</button>
                 )}
-                <button onClick={handleLogout} style={{ marginLeft: 10 }}>Logout</button>
+                <button onClick={handleLogout}>Logout</button>
             </div>
         </header>
     );

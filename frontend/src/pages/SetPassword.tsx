@@ -37,11 +37,11 @@ const SetPassword = () => {
     };
 
     if (error && !token) {
-        return <div style={{ textAlign: 'center', marginTop: 50 }}>Invalid or missing token</div>;
+        return <div className="auth-container" style={{ textAlign: 'center' }}>Invalid or missing token</div>;
     }
 
     return (
-        <div style={{ maxWidth: 400, margin: '100px auto', padding: 20 }}>
+        <div className="auth-container">
             <h2>Set your password</h2>
             {success ? (
                 <div style={{ color: 'green' }}>Password set successfully! Redirecting to login...</div>
@@ -54,7 +54,6 @@ const SetPassword = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        style={{ width: '100%', marginBottom: 10, padding: 8 }}
                     />
                     <input
                         type="password"
@@ -62,9 +61,8 @@ const SetPassword = () => {
                         value={confirm}
                         onChange={(e) => setConfirm(e.target.value)}
                         required
-                        style={{ width: '100%', marginBottom: 10, padding: 8 }}
                     />
-                    <button type="submit" style={{ padding: 8, width: '100%' }}>Set Password</button>
+                    <button type="submit">Set Password</button>
                 </form>
             )}
         </div>
