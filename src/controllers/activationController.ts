@@ -15,14 +15,3 @@ export const setPassword = async (req: Request, res: Response, next: NextFunctio
         next(e);
     }
 };
-
-export const redirectToSetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-        const { token } = req.params;
-        const tokenStr = Array.isArray(token) ? token[0] : token;
-        const redirectUrl = activationService.getFrontendRedirectUrl(tokenStr);
-        res.redirect(redirectUrl);
-    } catch (e) {
-        next(e);
-    }
-};

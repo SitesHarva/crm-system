@@ -28,7 +28,7 @@ const Filters = ({ filters, onChange, onClear }: FiltersProps) => {
                 <option value="New">New</option>
                 <option value="In work">In work</option>
                 <option value="Aggre">Aggre</option>
-                <option value="Disagre">Disagre</option>
+                <option value="Disaggre">Disaggre</option>
                 <option value="Dubbing">Dubbing</option>
             </select>
 

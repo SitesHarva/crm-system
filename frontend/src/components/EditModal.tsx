@@ -4,7 +4,7 @@ import { updateOrder } from '../store/ordersSlice';
 import api from '../api/axios';
 import type { AppDispatch } from '../store';
 
-const statuses = ['New', 'In work', 'Aggre', 'Disagre', 'Dubbing'];
+const statuses = ['New', 'In work', 'Aggre', 'Disaggre', 'Dubbing'];
 const courses = ['FS', 'QACX', 'JCX', 'JSCX', 'FE', 'PCX'];
 const courseFormats = ['static', 'online'];
 const courseTypes = ['pro', 'minimal', 'premium', 'incubator', 'vip'];

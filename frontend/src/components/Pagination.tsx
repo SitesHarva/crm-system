@@ -7,25 +7,37 @@ interface PaginationProps {
 const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) => {
     const getPageNumbers = (): (number | string)[] => {
         const delta = 2;
-        const range: number[] = [];
-        const rangeWithDots: (number | string)[] = [];
-        let l: number | undefined;
+        const pages: (number | string)[] = [];
 
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
-                range.push(i);
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
             }
+            return pages;
         }
 
-        range.forEach((i) => {
-            if (l !== undefined) {
-                if (i - l === 2) rangeWithDots.push(l + 1);
-                else if (i - l !== 1) rangeWithDots.push('...');
-            }
-            rangeWithDots.push(i);
-            l = i;
-        });
-        return rangeWithDots;
+        pages.push(1);
+
+        let left = Math.max(2, currentPage - delta);
+        let right = Math.min(totalPages - 1, currentPage + delta);
+
+        if (currentPage - delta > 2) {
+            pages.push('...');
+        }
+
+        for (let i = left; i <= right; i++) {
+            pages.push(i);
+        }
+
+        if (currentPage + delta < totalPages - 1) {
+            pages.push('...');
+        }
+
+        if (totalPages > 1) {
+            pages.push(totalPages);
+        }
+
+        return pages;
     };
 
     if (totalPages <= 1) return null;
