@@ -29,7 +29,7 @@ components:
         course: { type: string, enum: [FS, QACX, JCX, JSCX, FE, PCX], nullable: true }
         course_format: { type: string, enum: [static, online], nullable: true }
         course_type: { type: string, enum: [pro, minimal, premium, incubator, vip], nullable: true }
-        status: { type: string, enum: [New, "In work", Agree, Disagree, Dubbing], nullable: true }
+        status: { type: string, enum: [New, "In work", Aggre, Disagre, Dubbing], nullable: true }
         sum: { type: number, nullable: true }
         already_paid: { type: number, nullable: true }
         created_at: { type: string, format: date-time }

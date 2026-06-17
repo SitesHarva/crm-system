@@ -1,31 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { updateOrder } from '../store/ordersSlice';
-import type { AppDispatch } from "../store";
+import api from '../api/axios';
+import type { AppDispatch } from '../store';
 
 const statuses = ['New', 'In work', 'Aggre', 'Disagre', 'Dubbing'];
 const courses = ['FS', 'QACX', 'JCX', 'JSCX', 'FE', 'PCX'];
 const courseFormats = ['static', 'online'];
 const courseTypes = ['pro', 'minimal', 'premium', 'incubator', 'vip'];
 
-type FormFields = {
-    name: any;
-    surname: any;
-    email: any;
-    phone: any;
-    age: any;
-    course: any;
-    course_format: any;
-    course_type: any;
-    status: any;
-    sum: any;
-    already_paid: any;
-    group: any;
+type FormData = {
+    name: string;
+    surname: string;
+    email: string;
+    phone: string;
+    age: string;
+    course: string;
+    course_format: string;
+    course_type: string;
+    status: string;
+    sum: string;
+    already_paid: string;
+    group: string;
 };
 
 const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
     const dispatch = useDispatch<AppDispatch>();
-    const [form, setForm] = useState<FormFields>({
+    const [form, setForm] = useState<FormData>({
         name: order.name || '',
         surname: order.surname || '',
         email: order.email || '',
@@ -39,16 +40,44 @@ const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
         already_paid: order.already_paid || '',
         group: order.group || '',
     });
+    const [groups, setGroups] = useState<string[]>([]);
+    const [showAddGroup, setShowAddGroup] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
+
+    useEffect(() => {
+        const fetchGroups = async () => {
+            try {
+                const res = await api.get('/groups');
+                setGroups(res.data.map((g: any) => g.name));
+            } catch (e) {
+                console.error('Failed to fetch groups', e);
+            }
+        };
+        fetchGroups();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleAddGroup = async () => {
+        if (!newGroupName.trim()) return;
+        try {
+            await api.post('/groups', { name: newGroupName.trim() });
+            setGroups(prev => [...prev, newGroupName.trim()]);
+            setForm(prev => ({ ...prev, group: newGroupName.trim() }));
+            setNewGroupName('');
+            setShowAddGroup(false);
+        } catch (e) {
+            console.error('Failed to add group', e);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const dataToSend: any = {};
-        (Object.keys(form) as (keyof FormFields)[]).forEach(key => {
+        (Object.keys(form) as (keyof FormData)[]).forEach((key) => {
             const val = form[key];
             if (key === 'age' || key === 'sum' || key === 'already_paid') {
                 dataToSend[key] = val ? Number(val) : null;
@@ -61,8 +90,8 @@ const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
     };
 
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ background: 'white', padding: 20, borderRadius: 8, width: 500 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+            <div style={{ background: 'white', padding: 20, borderRadius: 8, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
                 <h3>Edit Order</h3>
                 <form onSubmit={handleSubmit}>
                     <input name="name" placeholder="Name" value={form.name} onChange={handleChange} /><br />
@@ -93,7 +122,26 @@ const EditModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
 
                     <input name="sum" placeholder="Sum" value={form.sum} onChange={handleChange} type="number" /><br />
                     <input name="already_paid" placeholder="Already paid" value={form.already_paid} onChange={handleChange} type="number" /><br />
-                    <input name="group" placeholder="Group" value={form.group} onChange={handleChange} /><br />
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <select name="group" value={form.group} onChange={handleChange} style={{ flex: 1 }}>
+                            <option value="">Group</option>
+                            {groups.map(g => <option key={g}>{g}</option>)}
+                        </select>
+                        <button type="button" onClick={() => setShowAddGroup(true)}>+ ADD GROUP</button>
+                    </div>
+                    {showAddGroup && (
+                        <div style={{ marginTop: 8 }}>
+                            <input
+                                placeholder="New group name"
+                                value={newGroupName}
+                                onChange={(e) => setNewGroupName(e.target.value)}
+                            />
+                            <button type="button" onClick={handleAddGroup}>Add</button>
+                            <button type="button" onClick={() => setShowAddGroup(false)}>Cancel</button>
+                        </div>
+                    )}
+                    <br />
 
                     <button type="submit">Save</button>
                     <button type="button" onClick={onClose}>Cancel</button>

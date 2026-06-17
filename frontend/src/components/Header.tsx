@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../store/authSlice';
-import type {AppDispatch, RootState} from "../store";
+import type { AppDispatch, RootState } from '../store';
 
 const Header = () => {
     const dispatch = useDispatch<AppDispatch>();
@@ -16,11 +16,10 @@ const Header = () => {
     return (
         <header style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 20px', background: '#f0f0f0' }}>
             <div>
-                <img src="/logo.png" alt="Logo" style={{ height: 40 }} />
-                <strong>CRM System</strong>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>📋 CRM</span>
             </div>
             <div>
-                <span>{user?.role === 'admin' ? 'Admin' : 'Manager'}: {user?.id}</span>
+                <span>{user?.role === 'admin' ? 'Admin' : 'Manager'}: {user?.name} {user?.surname}</span>
                 {user?.role === 'admin' && (
                     <button onClick={() => navigate('/admin')} style={{ marginLeft: 10 }}>Admin Panel</button>
                 )}

@@ -15,7 +15,12 @@ class AuthService {
             throw ApiError.BadRequest('Invalid credentials');
         }
 
-        const payload = { id: user._id.toString(), role: user.role };
+        const payload = {
+            id: user._id.toString(),
+            role: user.role,
+            name: user.name,
+            surname: user.surname,
+        };
         const tokens = tokenService.generateTokens(payload);
         await tokenService.saveToken(user._id.toString(), tokens.refreshToken);
         user.last_login = new Date();
@@ -34,7 +39,12 @@ class AuthService {
         if (!user || !user.is_active) {
             throw ApiError.UnauthorizedError();
         }
-        const payload = { id: user._id.toString(), role: user.role };
+        const payload = {
+            id: user._id.toString(),
+            role: user.role,
+            name: user.name,
+            surname: user.surname,
+        };
         const tokens = tokenService.generateTokens(payload);
         await tokenService.saveToken(user._id.toString(), tokens.refreshToken);
         return { ...tokens, user: payload };

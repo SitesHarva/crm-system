@@ -4,6 +4,8 @@ import api from '../api/axios';
 interface User {
     id: string;
     role: 'admin' | 'manager';
+    name: string;
+    surname: string;
 }
 
 interface AuthState {
@@ -15,7 +17,7 @@ interface AuthState {
 const initialState: AuthState = {
     user: null,
     isAuthenticated: false,
-    loading: false,   // було true, змініть на false
+    loading: true,
 };
 
 export const login = createAsyncThunk(
@@ -25,7 +27,6 @@ export const login = createAsyncThunk(
         const { accessToken, refreshToken, user } = response.data;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
-        // Встановлюємо заголовок для всіх наступних запитів
         api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
         return user;
     }
@@ -36,6 +37,7 @@ export const logout = createAsyncThunk('auth/logout', async () => {
     if (refreshToken) await api.post('/auth/logout', { refreshToken });
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    delete api.defaults.headers.common.Authorization;
 });
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
@@ -43,6 +45,8 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWi
         const token = localStorage.getItem('accessToken');
         if (token) {
             api.defaults.headers.common.Authorization = `Bearer ${token}`;
+        } else {
+            return rejectWithValue(null);
         }
         const response = await api.get('/users/me');
         return response.data;

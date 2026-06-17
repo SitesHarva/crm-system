@@ -7,6 +7,8 @@ import { OrderStatusEnum } from '../enums/order-status.enum';
 export interface IJWTPayload {
     id: string;
     role: 'admin' | 'manager';
+    name: string;
+    surname: string;
 }
 
 export interface IOrderFilter {
