@@ -1,0 +1,528 @@
+openapi: 3.0.0
+info:
+  title: CRM System API
+  version: 2.0.0
+  description: |
+    API для керування заявками (orders), менеджерами, групами.
+    Використовує JWT автентифікацію (Bearer token).
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Order:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string, nullable: true }
+        surname: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        age: { type: integer, nullable: true }
+        course: { type: string, enum: [FS, QACX, JCX, JSCX, FE, PCX], nullable: true }
+        course_format: { type: string, enum: [static, online], nullable: true }
+        course_type: { type: string, enum: [pro, minimal, premium, incubator, vip], nullable: true }
+        status: { type: string, enum: [New, "In work", Agree, Disagree, Dubbing], nullable: true }
+        sum: { type: number, nullable: true }
+        already_paid: { type: number, nullable: true }
+        created_at: { type: string, format: date-time }
+        utm: { type: string, nullable: true }
+        msg: { type: string, nullable: true }
+        group: { type: string, nullable: true }
+        manager: { type: string, nullable: true, description: "ID менеджера" }
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              author: { type: string }
+              createdAt: { type: string, format: date-time }
+    User:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        surname: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, manager] }
+        is_active: { type: boolean }
+        last_login: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    Group:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        created_at: { type: string, format: date-time }
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== AUTH ====================
+  /auth/login:
+    post:
+      summary: Вхід в систему
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: admin@gmail.com }
+                password: { type: string, example: admin }
+      responses:
+        200:
+          description: Успішний логін, повертає access та refresh токени
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+                  user: { type: object, properties: { id: string, role: string } }
+        401: { description: Невірні облікові дані або користувача заблоковано }
+
+  /auth/logout:
+    post:
+      summary: Вихід (видалення refresh токену)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        200: { description: Успішний вихід }
+
+  /auth/refresh:
+    post:
+      summary: Отримання нової пари токенів за refresh токеном
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        200:
+          description: Нова пара токенів
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+                  user: { type: object }
+
+  /auth/set-password:
+    post:
+      summary: Встановлення паролю через токен активації/відновлення
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 8, pattern: "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$" }
+      responses:
+        200: { description: Пароль встановлено успішно }
+        400: { description: Невірний токен або пароль }
+
+  /auth/activate/{token}:
+    get:
+      summary: Редирект на сторінку встановлення паролю (для активації менеджера)
+      tags: [Auth]
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        302: { description: Редирект на фронтенд /set-password?token=... }
+
+  # ==================== ORDERS ====================
+  /orders:
+    get:
+      summary: Отримати список заявок з пагінацією, фільтрацією та сортуванням
+      tags: [Orders]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 25, maximum: 100 }
+        - name: sort
+          in: query
+          schema: { type: string, default: "-created_at" }
+          description: "Поле для сортування (префікс '-' = DESC). Наприклад: `-created_at`, `name`, `-sum`"
+        - name: my
+          in: query
+          schema: { type: boolean, default: false }
+          description: "Показати тільки заявки поточного менеджера"
+        - name: name
+          in: query
+          schema: { type: string }
+          description: "Частковий збіг (регістронезалежний)"
+        - name: surname
+          in: query
+          schema: { type: string }
+        - name: email
+          in: query
+          schema: { type: string }
+        - name: phone
+          in: query
+          schema: { type: string }
+        - name: age
+          in: query
+          schema: { type: integer }
+        - name: course
+          in: query
+          schema: { type: string, enum: [FS, QACX, JCX, JSCX, FE, PCX] }
+        - name: course_format
+          in: query
+          schema: { type: string, enum: [static, online] }
+        - name: course_type
+          in: query
+          schema: { type: string, enum: [pro, minimal, premium, incubator, vip] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [New, "In work", Agree, Disagree, Dubbing] }
+        - name: group
+          in: query
+          schema: { type: string }
+          description: "Частковий збіг назви групи"
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        200:
+          description: Список заявок з метаінформацією пагінації
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Order" } }
+                  meta:
+                    type: object
+                    properties:
+                      total_items: { type: integer }
+                      total_pages: { type: integer }
+                      current_page: { type: integer }
+                      per_page: { type: integer }
+
+  /orders/excel:
+    get:
+      summary: Експорт заявок у Excel (з урахуванням поточних фільтрів)
+      tags: [Orders]
+      parameters: []
+      responses:
+        200:
+          description: Excel файл
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+
+  /orders/stats:
+    get:
+      summary: Загальна статистика по статусах (тільки адмін)
+      tags: [Orders]
+      responses:
+        200:
+          description: Статистика
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  byStatus: { type: object, additionalProperties: { type: integer } }
+
+  /orders/bulk-reassign:
+    patch:
+      summary: Масова передача заявок іншому менеджеру (тільки адмін)
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderIds, newManagerId]
+              properties:
+                orderIds: { type: array, items: { type: string, pattern: "^[0-9a-fA-F]{24}$" } }
+                newManagerId: { type: string, pattern: "^[0-9a-fA-F]{24}$" }
+      responses:
+        200: { description: Заявки передано успішно }
+
+  /orders/{id}:
+    get:
+      summary: Отримати одну заявку з повними даними (коментарі, msg, utm)
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200: { description: Об'єкт заявки, populated manager і comments.author }
+        404: { description: Заявку не знайдено }
+    patch:
+      summary: Оновити поля заявки (тільки якщо немає менеджера або він ваш)
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, nullable: true }
+                surname: { type: string, nullable: true }
+                email: { type: string, format: email, nullable: true }
+                phone: { type: string, nullable: true }
+                age: { type: integer, nullable: true }
+                course: { type: string, enum: [FS, QACX, JCX, JSCX, FE, PCX], nullable: true }
+                course_format: { type: string, enum: [static, online], nullable: true }
+                course_type: { type: string, enum: [pro, minimal, premium, incubator, vip], nullable: true }
+                status: { type: string, enum: [New, "In work", Agree, Disagree, Dubbing], nullable: true }
+                sum: { type: number, nullable: true }
+                already_paid: { type: number, nullable: true }
+                group: { type: string, nullable: true }
+      responses:
+        200: { description: Оновлена заявка }
+        403: { description: Немає прав для редагування }
+
+  /orders/{id}/comments:
+    post:
+      summary: Додати коментар до заявки (автоматично призначає менеджера та змінює статус на 'In work')
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1 }
+      responses:
+        200: { description: Заявка з доданим коментарем }
+        403: { description: Немає прав (заявка вже має іншого менеджера) }
+
+  # ==================== USERS ====================
+  /users/me:
+    get:
+      summary: Інформація про поточного користувача
+      tags: [Users]
+      responses:
+        200: { description: Дані користувача (без пароля), $ref: "#/components/schemas/User" }
+
+  /users:
+    get:
+      summary: Отримати список менеджерів з пагінацією (тільки адмін)
+      tags: [Users]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        200:
+          description: Список менеджерів з пагінацією (сортування за created_at DESC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/User" } }
+                  total: { type: integer }
+                  page: { type: integer }
+                  totalPages: { type: integer }
+    post:
+      summary: Створити нового менеджера (тільки адмін)
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, surname, email]
+              properties:
+                name: { type: string }
+                surname: { type: string }
+                email: { type: string, format: email }
+      responses:
+        201: { description: Створений менеджер (без пароля, is_active = false) }
+
+  /users/{id}/status:
+    patch:
+      summary: Забанити або розбанити користувача (тільки адмін)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_active]
+              properties:
+                is_active: { type: boolean }
+      responses:
+        200: { description: Користувач оновлений }
+
+  /users/{id}/activation-link:
+    post:
+      summary: Згенерувати посилання для активації менеджера (токен 30 хв)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                frontendBaseUrl: { type: string, example: "http://localhost:3000" }
+      responses:
+        200:
+          description: Посилання для активації
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  link: { type: string }
+
+  /users/{id}/recovery-link:
+    post:
+      summary: Згенерувати посилання для відновлення паролю менеджера (токен 30 хв)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                frontendBaseUrl: { type: string, example: "http://localhost:3000" }
+      responses:
+        200:
+          description: Посилання для відновлення
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  link: { type: string }
+
+  /users/{id}/stats:
+    get:
+      summary: Отримати статистику по заявках конкретного менеджера (тільки адмін)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Статистика (загальна кількість заявок та по статусах)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  byStatus: { type: object, additionalProperties: { type: integer } }
+
+  # ==================== GROUPS ====================
+  /groups:
+    get:
+      summary: Отримати всі групи (список назв)
+      tags: [Groups]
+      responses:
+        200:
+          description: Масив груп
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Group" }
+    post:
+      summary: Створити нову групу (тільки адмін)
+      tags: [Groups]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        201:
+          description: Створена група
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Group" }
+        400: { description: Група вже існує }
