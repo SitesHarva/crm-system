@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import api from '../api/axios';
 
 interface FiltersProps {
     filters: any;
@@ -13,6 +14,27 @@ const Filters = ({ filters, onChange, onClear }: FiltersProps) => {
         const checked = e.target.checked;
         setMyChecked(checked);
         onChange('my', checked);
+    };
+
+    const handleExportExcel = async () => {
+        try {
+            const response = await api.get('/orders/excel', {
+                params: filters,
+                responseType: 'blob'
+            });
+            const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'orders.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Failed to export Excel');
+        }
     };
 
     return (
@@ -65,13 +87,7 @@ const Filters = ({ filters, onChange, onClear }: FiltersProps) => {
             </label>
 
             <button onClick={onClear}>Clear filters</button>
-            <button onClick={() => {
-                const baseUrl = import.meta.env.VITE_API_URL;
-                const url = `${baseUrl}/orders/excel?${new URLSearchParams(filters as any).toString()}`;
-                window.open(url, '_blank');
-            }}>
-                Export Excel
-            </button>
+            <button onClick={handleExportExcel}>Export Excel</button>
         </div>
     );
 };

@@ -13,7 +13,7 @@ class OrderService {
     private buildFilter(filter: IOrderFilter, user?: IJWTPayload): Record<string, any> {
         const mongoFilter: Record<string, any> = {};
 
-        if (filter.age) mongoFilter.age = filter.age;
+        if (filter.age !== undefined && filter.age !== null) mongoFilter.age = filter.age;
         if (filter.name) mongoFilter.name = { $regex: escapeRegex(filter.name), $options: 'i' };
         if (filter.surname) mongoFilter.surname = { $regex: escapeRegex(filter.surname), $options: 'i' };
         if (filter.email) mongoFilter.email = { $regex: escapeRegex(filter.email), $options: 'i' };
@@ -27,8 +27,14 @@ class OrderService {
 
         if (filter.created_at) {
             mongoFilter.created_at = {};
-            if (filter.created_at.$gte) mongoFilter.created_at.$gte = filter.created_at.$gte;
-            if (filter.created_at.$lte) mongoFilter.created_at.$lte = filter.created_at.$lte;
+            if (filter.created_at.$gte) {
+                const gte = new Date(filter.created_at.$gte);
+                if (!isNaN(gte.getTime())) mongoFilter.created_at.$gte = gte;
+            }
+            if (filter.created_at.$lte) {
+                const lte = new Date(filter.created_at.$lte);
+                if (!isNaN(lte.getTime())) mongoFilter.created_at.$lte = lte;
+            }
         }
 
         if (filter.manager) mongoFilter.manager = filter.manager;
@@ -46,8 +52,16 @@ class OrderService {
 
         if (startDate || endDate) {
             filter.created_at = {};
-            if (startDate) filter.created_at.$gte = startDate;
-            if (endDate) filter.created_at.$lte = endDate;
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                filter.created_at.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                filter.created_at.$lte = end;
+            }
         }
 
         const sortDirection = sort.startsWith('-') ? -1 : 1;
@@ -148,6 +162,18 @@ class OrderService {
 
         const cursor = Order.find(mongoFilter).populate('manager', 'name surname').lean().cursor();
         for (let doc = await cursor.next(); doc; doc = await cursor.next()) {
+            // Безпечне перетворення дати
+            let created_at_str = '';
+            if (doc.created_at) {
+                if (doc.created_at instanceof Date) {
+                    created_at_str = doc.created_at.toISOString();
+                } else if (typeof doc.created_at === 'string') {
+                    created_at_str = doc.created_at;
+                } else if (typeof doc.created_at === 'number') {
+                    created_at_str = new Date(doc.created_at).toISOString();
+                }
+            }
+
             worksheet.addRow({
                 _id: doc._id.toString(),
                 name: doc.name,
@@ -161,7 +187,7 @@ class OrderService {
                 status: doc.status,
                 sum: doc.sum,
                 already_paid: doc.already_paid,
-                created_at: doc.created_at?.toISOString(),
+                created_at: created_at_str,
                 manager: doc.manager ? `${(doc.manager as any).name} ${(doc.manager as any).surname}` : '',
                 group: doc.group,
                 msg: doc.msg,
