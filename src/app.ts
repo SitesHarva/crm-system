@@ -12,6 +12,7 @@ import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import groupRoutes from './routes/groupRoutes';
 import { User } from './models/User';
+import { Order } from './models/Order';
 import { errorHandler, notFoundHandler } from './middlewares/errorMiddleware';
 
 import helmet from 'helmet';
@@ -51,18 +52,56 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const seedAdmin = async () => {
-    const adminExists = await User.findOne({ role: 'admin' });
+    const adminExists = await User.findOne({ email: config.adminEmail || 'admin@gmail.com' });
     if (!adminExists) {
-        const hashedPassword = await bcrypt.hash('admin', 10);
         await User.create({
             name: 'Admin',
             surname: 'Admin',
-            email: 'admin@gmail.com',
-            password: hashedPassword,
+            email: config.adminEmail || 'admin@gmail.com',
+            password: config.adminPassword || 'admin',
             role: 'admin',
             is_active: true
         });
-        logger.info('Default Admin created (admin@gmail.com / admin)');
+    }
+};
+
+const migrateNumericIds = async () => {
+    const Counter = mongoose.models.Counter || mongoose.model('Counter');
+
+    const ordersWithoutId = await Order.find({ id: { $exists: false } }).sort({ created_at: 1 });
+    if (ordersWithoutId.length > 0) {
+        logger.info(`Migrating ${ordersWithoutId.length} orders to numeric IDs...`);
+        const counterDoc = await Counter.findById('orderId');
+        let seq = counterDoc ? (counterDoc as any).seq : 0;
+        for (const order of ordersWithoutId) {
+            seq += 1;
+            order.id = seq;
+            await order.save();
+        }
+        await Counter.findByIdAndUpdate(
+            'orderId',
+            { seq },
+            { upsert: true }
+        );
+        logger.info('Orders migration completed.');
+    }
+
+    const usersWithoutId = await User.find({ id: { $exists: false } }).sort({ created_at: 1 });
+    if (usersWithoutId.length > 0) {
+        logger.info(`Migrating ${usersWithoutId.length} users to numeric IDs...`);
+        const counterDoc = await Counter.findById('userId');
+        let seq = counterDoc ? (counterDoc as any).seq : 0;
+        for (const user of usersWithoutId) {
+            seq += 1;
+            user.id = seq;
+            await user.save();
+        }
+        await Counter.findByIdAndUpdate(
+            'userId',
+            { seq },
+            { upsert: true }
+        );
+        logger.info('Users migration completed.');
     }
 };
 
@@ -72,6 +111,7 @@ mongoose.connect(config.mongoUri)
     .then(async () => {
         logger.info('Connected to MongoDB Atlas');
         await seedAdmin();
+        await migrateNumericIds();
         startCronJobs();
         server = app.listen(config.port, () => {
             logger.info(`Server running on http://localhost:${config.port}`);

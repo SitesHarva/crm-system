@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import Pagination from '../components/Pagination';
+import Header from '../components/Header';
 
 interface Manager {
     _id: string;
+    id: number;
     name: string;
     surname: string;
     email: string;
@@ -22,6 +24,7 @@ const AdminPanel = () => {
     const [newManager, setNewManager] = useState({ name: '', surname: '', email: '' });
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [activeStats, setActiveStats] = useState<{ name: string; total: number; byStatus: Record<string, number> } | null>(null);
 
     const fetchManagers = async () => {
         const res = await api.get(`/users?page=${page}&limit=10`);
@@ -40,6 +43,15 @@ const AdminPanel = () => {
     }, [page]);
 
     const createManager = async () => {
+        if (!newManager.name.trim() || !newManager.surname.trim() || !newManager.email.trim()) {
+            alert('All fields are required');
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newManager.email.trim())) {
+            alert('Please enter a valid email address');
+            return;
+        }
         try {
             await api.post('/users', newManager);
             setNewManager({ name: '', surname: '', email: '' });
@@ -78,6 +90,15 @@ const AdminPanel = () => {
         }
     };
 
+    const showStats = async (id: string, name: string, surname: string) => {
+        try {
+            const res = await api.get(`/users/${id}/stats`);
+            setActiveStats({ name: `${name} ${surname}`, total: res.data.total, byStatus: res.data.byStatus });
+        } catch (error: any) {
+            alert('Failed to fetch stats');
+        }
+    };
+
     const getStatusClass = (status: string) => {
         const map: Record<string, string> = {
             'null': 'status-badge-null',
@@ -92,6 +113,7 @@ const AdminPanel = () => {
 
     return (
         <div className="admin-container">
+            <Header />
             <h1>Admin Panel</h1>
 
             <div className="admin-actions">
@@ -153,6 +175,7 @@ const AdminPanel = () => {
                 <table>
                     <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Active</th>
@@ -162,6 +185,7 @@ const AdminPanel = () => {
                     <tbody>
                     {managers.map(m => (
                         <tr key={m._id}>
+                            <td>{m._id}</td>
                             <td>{m.name} {m.surname}</td>
                             <td>{m.email}</td>
                             <td>
@@ -180,14 +204,7 @@ const AdminPanel = () => {
                                 >
                                     {m.is_active ? 'Ban' : 'Unban'}
                                 </button>
-                                <button className="secondary" onClick={async () => {
-                                    try {
-                                        const res = await api.get(`/users/${m._id}/stats`);
-                                        alert(`Stats for ${m.name} ${m.surname}:\n${JSON.stringify(res.data, null, 2)}`);
-                                    } catch (error: any) {
-                                        alert('Failed to fetch stats');
-                                    }
-                                }}>Stats</button>
+                                <button className="secondary" onClick={() => showStats(m._id, m.name, m.surname)}>Stats</button>
                             </td>
                         </tr>
                     ))}
@@ -195,6 +212,34 @@ const AdminPanel = () => {
                 </table>
             </div>
             <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+
+            {activeStats && (
+                <div className="modal-overlay" onClick={() => setActiveStats(null)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <h3>Stats for {activeStats.name}</h3>
+                        <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+                            <p><strong>Total Orders:</strong> {activeStats.total}</p>
+                            <table className="stats-table" style={{ marginTop: '10px' }}>
+                                <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Count</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {Object.entries(activeStats.byStatus).map(([status, count]) => (
+                                    <tr key={status}>
+                                        <td>{status === 'null' ? 'No Status' : status}</td>
+                                        <td>{count}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button className="secondary" onClick={() => setActiveStats(null)}>Close</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

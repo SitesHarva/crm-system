@@ -16,12 +16,12 @@ class UserRepository {
 
     async findManagersPaginated(skip: number, limit: number, sortBy: string) {
         const [data, total] = await Promise.all([
-            User.find({ role: RoleEnum.MANAGER })
+            User.find({ role: { $in: [RoleEnum.MANAGER, RoleEnum.ADMIN] } })
                 .select('-password')
                 .sort(sortBy)
                 .skip(skip)
                 .limit(limit),
-            User.countDocuments({ role: RoleEnum.MANAGER })
+            User.countDocuments({ role: { $in: [RoleEnum.MANAGER, RoleEnum.ADMIN] } })
         ]);
         return { data, total };
     }

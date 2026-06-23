@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { checkAuth } from './store/authSlice';
+import { checkAuth, logout } from './store/authSlice';
 import Login from './pages/Login';
 import PrivateRoute from './components/PrivateRoute';
 import Orders from './pages/Orders';
@@ -16,6 +16,14 @@ function App() {
 
     useEffect(() => {
         dispatch(checkAuth());
+    }, [dispatch]);
+
+    useEffect(() => {
+        const handleUnauthorized = () => {
+            dispatch(logout());
+        };
+        window.addEventListener('unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('unauthorized', handleUnauthorized);
     }, [dispatch]);
 
     if (loading) return <div>Loading...</div>;

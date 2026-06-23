@@ -9,7 +9,7 @@ interface OrderTableProps {
     sortBy: string;
 }
 
-const columns = ['_id', 'name', 'surname', 'email', 'phone', 'age', 'course', 'course_format', 'course_type', 'status', 'sum', 'already_paid', 'created_at', 'manager', 'group'];
+const columns = ['id', 'name', 'surname', 'email', 'phone', 'age', 'course', 'course_format', 'course_type', 'status', 'sum', 'already_paid', 'created_at', 'manager', 'group'];
 
 export const OrderTable: React.FC<OrderTableProps> = ({ orders, loading, onSort, sortBy }) => {
     const [expandedId, setExpandedId] = useState<string | null>(null);

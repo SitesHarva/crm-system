@@ -1,8 +1,14 @@
-import { Schema, model, Document, Types } from 'mongoose';
-import {CourseEnum} from "../enums/course.enum";
-import {CourseFormatEnum} from "../enums/course-format.enum";
-import {CourseTypeEnum} from "../enums/course-type.enum";
-import {OrderStatusEnum} from "../enums/order-status.enum";
+import mongoose, { Schema, model, Document, Types } from 'mongoose';
+import { CourseEnum } from "../enums/course.enum";
+import { CourseFormatEnum } from "../enums/course-format.enum";
+import { CourseTypeEnum } from "../enums/course-type.enum";
+import { OrderStatusEnum } from "../enums/order-status.enum";
+
+const CounterSchema = mongoose.models.Counter ? mongoose.model('Counter').schema : new Schema({
+    _id: { type: String, required: true },
+    seq: { type: Number, default: 0 }
+});
+const Counter = mongoose.models.Counter || mongoose.model('Counter', CounterSchema);
 
 export interface IComment {
     text: string;
@@ -11,6 +17,7 @@ export interface IComment {
 }
 
 export interface IOrder extends Document {
+    id: number;
     name: string | null;
     surname: string | null;
     email: string | null;
@@ -31,6 +38,7 @@ export interface IOrder extends Document {
 }
 
 const orderSchema = new Schema<IOrder>({
+    id: { type: Number, unique: true },
     name: { type: String, default: null },
     surname: { type: String, default: null },
     email: { type: String, default: null },
@@ -52,6 +60,24 @@ const orderSchema = new Schema<IOrder>({
         author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
         createdAt: { type: Date, default: Date.now }
     }]
+});
+
+orderSchema.pre<IOrder>('validate', function () {
+    if (this.course === '') this.course = null;
+    if (this.course_format === '') this.course_format = null;
+    if (this.course_type === '') this.course_type = null;
+    if (this.status === '') this.status = null;
+});
+
+orderSchema.pre<IOrder>('save', async function () {
+    if (!this.id) {
+        const counter = await Counter.findByIdAndUpdate(
+            { _id: 'orderId' },
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        this.id = counter.seq;
+    }
 });
 
 orderSchema.index({ created_at: -1 });

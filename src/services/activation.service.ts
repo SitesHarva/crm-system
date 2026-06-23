@@ -31,11 +31,6 @@ class ActivationService {
         return `${baseUrl}/set-password?token=${token}`;
     }
 
-    getFrontendRedirectUrl(token: string): string {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        return `${frontendUrl}/set-password?token=${token}`;
-    }
-
     async setPassword(token: string, newPassword: string): Promise<void> {
         const { userId, type } = this.verifyToken(token);
         if (type !== 'activate' && type !== 'recover') {
@@ -44,6 +39,10 @@ class ActivationService {
 
         const user = await User.findById(userId);
         if (!user) throw ApiError.NotFound('Користувача не знайдено');
+
+        if (type === 'activate' && user.is_active && user.password) {
+            throw ApiError.BadRequest('Користувач вже активований');
+        }
 
         const hashed = await bcrypt.hash(newPassword, 10);
         user.password = hashed;

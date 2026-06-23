@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL,
     headers: { 'Content-Type': 'application/json' },
 });
 
@@ -31,7 +33,12 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (
+            error.response?.status === 401 &&
+            !originalRequest._retry &&
+            !originalRequest.url?.includes('/auth/login') &&
+            !originalRequest.url?.includes('/auth/refresh')
+        ) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -49,7 +56,7 @@ api.interceptors.response.use(
             try {
                 const refreshToken = localStorage.getItem('refreshToken');
                 const response = await axios.post(
-                    `${import.meta.env.VITE_API_URL}/auth/refresh`,
+                    `${baseURL}/auth/refresh`,
                     { refreshToken }
                 );
                 const { accessToken, refreshToken: newRefreshToken } = response.data;
@@ -63,9 +70,7 @@ api.interceptors.response.use(
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
                 delete api.defaults.headers.common.Authorization;
-                if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/set-password')) {
-                    window.location.href = '/login';
-                }
+                window.dispatchEvent(new Event('unauthorized'));
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;

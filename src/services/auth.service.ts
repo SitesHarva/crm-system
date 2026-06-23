@@ -5,14 +5,14 @@ import { ApiError } from '../exceptions/api-error';
 
 class AuthService {
     async login(email: string, pass: string) {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select('+password');
         if (!user || !user.is_active || !user.password) {
-            throw ApiError.UnauthorizedError();
+            throw new ApiError(401, 'Invalid email or password');
         }
 
         const isPassEquals = await bcrypt.compare(pass, user.password);
         if (!isPassEquals) {
-            throw ApiError.BadRequest('Invalid credentials');
+            throw new ApiError(401, 'Invalid email or password');
         }
 
         const payload = {

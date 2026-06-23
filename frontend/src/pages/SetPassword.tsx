@@ -27,6 +27,11 @@ const SetPassword = () => {
             setError('Password must be at least 8 characters');
             return;
         }
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            setError('Password must contain both letters and numbers');
+            return;
+        }
         try {
             await api.post('/auth/set-password', { token, password });
             setSuccess(true);

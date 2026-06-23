@@ -14,18 +14,26 @@ const OrderRow = ({ order, expanded, onToggle, onEdit }: OrderRowProps) => {
     const dispatch = useDispatch<AppDispatch>();
     const { user } = useSelector((state: RootState) => state.auth);
     const [commentText, setCommentText] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const canInteract = !order.manager || order.manager?._id === user?.id;
 
     const handleAddComment = async () => {
-        if (!commentText.trim()) return;
-        await dispatch(addComment({ id: order._id, text: commentText }));
-        setCommentText('');
+        if (!commentText.trim() || isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await dispatch(addComment({ id: order._id, text: commentText })).unwrap();
+            setCommentText('');
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
         <>
             <tr className="clickable-row" onClick={onToggle}>
-                <td>{order._id}</td>
+                <td>{order.id}</td>
                 <td>{order.name}</td>
                 <td>{order.surname}</td>
                 <td>{order.email}</td>
@@ -62,9 +70,10 @@ const OrderRow = ({ order, expanded, onToggle, onEdit }: OrderRowProps) => {
                                         onChange={e => setCommentText(e.target.value)}
                                         placeholder="Write a comment..."
                                         rows={2}
+                                        disabled={isSubmitting}
                                     />
                                     <div>
-                                        <button onClick={handleAddComment}>Add comment</button>
+                                        <button disabled={isSubmitting} onClick={handleAddComment}>Add comment</button>
                                         <button onClick={onEdit} style={{ marginLeft: '10px' }}>Edit order</button>
                                     </div>
                                 </div>

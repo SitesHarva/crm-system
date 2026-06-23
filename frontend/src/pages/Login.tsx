@@ -13,6 +13,11 @@ const Login = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            setError('Please enter a valid email address');
+            return;
+        }
         try {
             await dispatch(login({ email, password })).unwrap();
             navigate('/orders');

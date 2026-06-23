@@ -94,24 +94,22 @@ class OrderService {
     }
 
     async addCommentToOrder(order: IOrder, text: string, userId: string) {
-        const session = await mongoose.startSession();
-        return session.withTransaction(async () => {
-            if (!order.status || order.status === OrderStatusEnum.NEW) {
-                order.status = OrderStatusEnum.IN_WORK;
-            }
-            if (!order.manager) {
-                order.manager = new mongoose.Types.ObjectId(userId);
-            }
-            order.comments.push({
-                text,
-                author: new mongoose.Types.ObjectId(userId),
-                createdAt: new Date()
-            });
-            await order.save({ session });
-            return Order.findById(order._id)
-                .populate('manager', 'name surname')
-                .populate('comments.author', 'name surname');
+        if (!order.status || order.status === OrderStatusEnum.NEW) {
+            order.status = OrderStatusEnum.IN_WORK;
+        }
+        if (!order.manager) {
+            order.manager = new mongoose.Types.ObjectId(userId);
+        }
+        order.comments.push({
+            text,
+            author: new mongoose.Types.ObjectId(userId),
+            createdAt: new Date()
         });
+        await order.save();
+        const updated = await Order.findById(order._id)
+            .populate('manager', 'name surname')
+            .populate('comments.author', 'name surname');
+        return updated;
     }
 
     async getStatistics() {
@@ -135,21 +133,44 @@ class OrderService {
         return { total, byStatus };
     }
 
-    async generateExcel(filter: IOrderFilter, user: IJWTPayload) {
-        const mongoFilter = this.buildFilter(filter, user);
+    async generateExcel(filter: IOrderFilter, user: IJWTPayload, options: { my: boolean; startDate?: Date; endDate?: Date; sort: string }) {
+        const { my, startDate, endDate, sort } = options;
+        const finalFilter: IOrderFilter = { ...filter };
+
+        if (my) finalFilter.manager = new mongoose.Types.ObjectId(user.id);
+
+        if (startDate || endDate) {
+            finalFilter.created_at = {};
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                finalFilter.created_at.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                finalFilter.created_at.$lte = end;
+            }
+        }
+
+        const sortDirection = sort.startsWith('-') ? -1 : 1;
+        const sortField = sort.startsWith('-') ? sort.substring(1) : sort;
+        const sortOption: Record<string, 1 | -1> = { [sortField]: sortDirection, _id: 1 };
+
+        const mongoFilter = this.buildFilter(finalFilter, user);
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Orders');
 
         worksheet.columns = [
-            { header: 'ID', key: '_id', width: 25 },
+            { header: 'ID', key: 'id', width: 10 },
             { header: 'Name', key: 'name', width: 15 },
             { header: 'Surname', key: 'surname', width: 20 },
             { header: 'Email', key: 'email', width: 25 },
             { header: 'Phone', key: 'phone', width: 20 },
             { header: 'Age', key: 'age', width: 8 },
             { header: 'Course', key: 'course', width: 10 },
-            { header: 'Course Format', key: 'course_format', width: 12 },
-            { header: 'Course Type', key: 'course_type', width: 12 },
+            { header: 'Course Format', key: 'course_format', width: 15 },
+            { header: 'Course Type', key: 'course_type', width: 15 },
             { header: 'Status', key: 'status', width: 15 },
             { header: 'Sum', key: 'sum', width: 10 },
             { header: 'Already Paid', key: 'already_paid', width: 12 },
@@ -160,9 +181,13 @@ class OrderService {
             { header: 'UTM', key: 'utm', width: 30 }
         ];
 
-        const cursor = Order.find(mongoFilter).populate('manager', 'name surname').lean().cursor();
+        const cursor = Order.find(mongoFilter)
+            .populate('manager', 'name surname')
+            .sort(sortOption)
+            .lean()
+            .cursor();
+
         for (let doc = await cursor.next(); doc; doc = await cursor.next()) {
-            // Безпечне перетворення дати
             let created_at_str = '';
             if (doc.created_at) {
                 if (doc.created_at instanceof Date) {
@@ -175,7 +200,7 @@ class OrderService {
             }
 
             worksheet.addRow({
-                _id: doc._id.toString(),
+                id: doc.id || doc._id.toString(),
                 name: doc.name,
                 surname: doc.surname,
                 email: doc.email,

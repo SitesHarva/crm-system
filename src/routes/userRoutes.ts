@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
+import Joi from 'joi';
 import {
     createManager,
     updateBanStatus,
@@ -9,6 +10,7 @@ import {
 } from '../controllers/userController';
 import { verifyAccessToken, isAdmin, AuthRequest } from '../middlewares/authMiddleware';
 import { userService } from '../services/user.service';
+import { validate } from '../middlewares/validateMiddleware';
 
 const router = Router();
 
@@ -25,7 +27,13 @@ router.get('/', isAdmin, async (req: AuthRequest, res: Response, next: NextFunct
     } catch (e) { next(e); }
 });
 
-router.post('/', isAdmin, createManager);
+const createManagerSchema = Joi.object({
+    name: Joi.string().trim().min(1).required(),
+    surname: Joi.string().trim().min(1).required(),
+    email: Joi.string().email().required()
+});
+
+router.post('/', isAdmin, validate(createManagerSchema), createManager);
 router.patch('/:id/status', isAdmin, updateBanStatus);
 
 router.post('/:id/activation-link', isAdmin, generateActivationLink);

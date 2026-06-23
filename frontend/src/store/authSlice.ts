@@ -42,12 +42,20 @@ export const logout = createAsyncThunk('auth/logout', async () => {
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
     try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            api.defaults.headers.common.Authorization = `Bearer ${token}`;
-        } else {
+        let token = localStorage.getItem('accessToken');
+        if (!token) {
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (refreshToken) {
+                const response = await api.post('/auth/refresh', { refreshToken });
+                const { accessToken: newAccess, refreshToken: newRefresh, user } = response.data;
+                localStorage.setItem('accessToken', newAccess);
+                localStorage.setItem('refreshToken', newRefresh);
+                api.defaults.headers.common.Authorization = `Bearer ${newAccess}`;
+                return user;
+            }
             return rejectWithValue(null);
         }
+        api.defaults.headers.common.Authorization = `Bearer ${token}`;
         const response = await api.get('/users/me');
         return response.data;
     } catch {
